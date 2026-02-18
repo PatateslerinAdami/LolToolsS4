@@ -1,0 +1,34 @@
+﻿<Window x:Class="LolEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Inibin Viewer" Height="450" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#F0F0F0" Margin="0,0,0,5">
+            <Button Name="BtnOpen" Content="Open .inibin" Margin="5" Padding="10,5" Click="BtnOpen_Click"/>
+            <Button Name="BtnTestHash" Content="Test Hash" Margin="5" Padding="10,5" Click="BtnTestHash_Click"/>
+        </StackPanel>
+
+        <TreeView Grid.Row="1" Name="FileTree">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate ItemsSource="{Binding Properties}">
+                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                    <HierarchicalDataTemplate.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" Foreground="Blue" Margin="0,0,5,0"/>
+                                <TextBlock Text="=" Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding Value}" Foreground="Green"/>
+                                <TextBlock Text="{Binding Hash, StringFormat='(Hash: {0})'}" Foreground="Gray" Margin="10,0,0,0" FontSize="10"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </HierarchicalDataTemplate.ItemTemplate>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </Grid>
+</Window>
