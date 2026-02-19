@@ -18,7 +18,7 @@ namespace LolEditor
         private void BtnOpen_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "League Files (*.inibin;*.troybin)|*.inibin;*.troybin|All Files (*.*)|*.*";
+            ofd.Filter = "League Files (*.inibin;*.troybin;*.luaobj)|*.inibin;*.troybin;*.luaobj|All Files (*.*)|*.*";
 
             if (ofd.ShowDialog() == true)
             {
@@ -30,7 +30,78 @@ namespace LolEditor
         {
             _currentFilePath = path;
             string extension = System.IO.Path.GetExtension(path).ToLower();
+            if (extension == ".luaobj")
+            {
+                var reader = new LolFormats.LuaObjReader();
+                var luaFile = reader.Read(path);
 
+                var interpreter = new LolFormats.LuaInterpreter();
+                var globals = interpreter.Interpret(luaFile);
+
+                var fakeFile = new InibinFile();
+                var mainSec = new InibinSection { Name = "Lua Globals" };
+
+                int GetLuaTypeId(object obj)
+                {
+                    if (obj is string) return 12; // String
+                    if (obj is bool) return 5;    // Boolean
+                    if (obj is float || obj is double) return 1; // Float
+                    if (obj is int || obj is long) return 0;     // Int
+                    return 12; 
+                }
+
+                foreach (var kvp in globals)
+                {
+                    if (kvp.Value is Dictionary<object, object> subTable)
+                    {
+                        var subSec = new InibinSection { Name = kvp.Key.ToString() };
+
+                        var sortedKeys = new List<object>(subTable.Keys);
+                        sortedKeys.Sort((k1, k2) =>
+                        {
+                            if (k1 is double d1 && k2 is double d2) return d1.CompareTo(d2);
+                            if (k1 is int i1 && k2 is int i2) return i1.CompareTo(i2);
+                            return k1.ToString().CompareTo(k2.ToString());
+                        });
+
+                        foreach (var subKey in sortedKeys)
+                        {
+                            object val = subTable[subKey];
+
+                            string displayName = (subKey is double || subKey is int)
+                                ? $"[{subKey}]"
+                                : subKey.ToString();
+
+                            subSec.Properties.Add(new InibinProperty
+                            {
+                                Name = displayName,
+                                Value = val,
+                                Hash = 0,
+                                TypeId = GetLuaTypeId(val)
+                            });
+                        }
+                        fakeFile.Sections.Add(subSec);
+                    }
+                    else
+                    {
+                        mainSec.Properties.Add(new InibinProperty
+                        {
+                            Name = kvp.Key.ToString(),
+                            Value = kvp.Value,
+                            Hash = 0,
+                            TypeId = GetLuaTypeId(kvp.Value)
+                        });
+                    }
+                }
+
+                if (mainSec.Properties.Count > 0)
+                    fakeFile.Sections.Insert(0, mainSec);
+
+                FileTree.ItemsSource = fakeFile.Sections;
+                BtnSave.IsEnabled = true;
+                BtnAddProp.IsEnabled = false;
+                return;
+            }
             if (extension == ".troybin")
             {
                 _dictionary = InibinDictionary.LoadFromFile("troybin_dict.txt");
@@ -39,13 +110,24 @@ namespace LolEditor
             {
                 _dictionary = InibinDictionary.LoadFromFile("inibin_dict.txt");
             }
-            var reader = new InibinReader();
-            var rawFile = reader.Read(path);
 
+            var inibinReader = new InibinReader();
+            var rawFile = inibinReader.Read(path);
             _currentFile = OrganizeFile(rawFile);
+            if (path.EndsWith(".troybin"))
+            {
+                string propListPath = "troy_properties.txt";
+                if (System.IO.File.Exists(propListPath))
+                {
+                    var props = System.IO.File.ReadAllLines(propListPath)
+                                              .Where(l => !string.IsNullOrWhiteSpace(l))
+                                              .Select(l => l.Trim());
 
+                    var resolver = new LolFormats.TroybinResolver(props);
+                    resolver.Resolve(_currentFile);
+                }
+            }
             FileTree.ItemsSource = _currentFile.Sections;
-
             BtnSave.IsEnabled = true;
             BtnAddProp.IsEnabled = true;
         }
@@ -176,13 +258,22 @@ namespace LolEditor
             try
             {
                 string backupPath = _currentFilePath + ".bak";
-
                 if (!System.IO.File.Exists(backupPath))
                 {
                     System.IO.File.Copy(_currentFilePath, backupPath);
                 }
-                var writer = new InibinWriter();
-                writer.Write(_currentFilePath, _currentFile);
+                string ext = System.IO.Path.GetExtension(_currentFilePath).ToLower();
+
+                if (ext == ".luaobj")
+                {
+                    var writer = new LolFormats.LuaObjWriter();
+                    writer.Write(_currentFilePath, _currentFile);
+                }
+                else
+                {
+                    var writer = new InibinWriter();
+                    writer.Write(_currentFilePath, _currentFile);
+                }
 
                 MessageBox.Show("File saved successfully!\nBackup created at: " + backupPath);
             }
@@ -324,13 +415,22 @@ namespace LolEditor
         {
             try
             {
+                var culture = System.Globalization.CultureInfo.InvariantCulture;
+
+                if (typeId >= 6 && typeId <= 11)
+                {
+                    var parts = input.Split(new[] { ' ', ',' }, System.StringSplitOptions.RemoveEmptyEntries);
+                    return parts.Select(p => float.Parse(p, culture)).ToArray();
+                }
                 switch (typeId)
                 {
-                    case 0: return int.Parse(input);          // Int32
-                    case 1: return float.Parse(input);        // Float
-                    case 4: return byte.Parse(input);         // Byte
-                    case 5: return bool.Parse(input);         // Bool
-                    case 12: return input;                    // String
+                    case 0: return int.Parse(input);
+                    case 1: return float.Parse(input, culture);
+                    case 2: return float.Parse(input, culture);
+                    case 3: return short.Parse(input);
+                    case 4: return byte.Parse(input);
+                    case 5: return bool.Parse(input);
+                    case 12: return input;
                     default: return input;
                 }
             }
