@@ -55,10 +55,12 @@ namespace LolFormats
             }
             return null; 
         }
-        public static InibinDictionary LoadDefault()
+        public static InibinDictionary LoadFromFile(string filename)
         {
             var dict = new InibinDictionary();
-            string filePath = "dictionary.txt";
+
+            string basePath = System.AppDomain.CurrentDomain.BaseDirectory;
+            string filePath = Path.Combine(basePath, filename);
 
             if (File.Exists(filePath))
             {
@@ -70,6 +72,7 @@ namespace LolFormats
                         continue;
 
                     string cleanLine = line.Trim();
+
                     if (cleanLine.Contains("*"))
                     {
                         var parts = cleanLine.Split('*');

@@ -1,0 +1,55 @@
+﻿<Window x:Class="LolEditor.AddPropertyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Property" Height="380" Width="320" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="10">
+
+        <CheckBox Name="ChkRawHash" Content="Use Raw Hash" Margin="0,0,0,15"
+                  Checked="ChkRawHash_Changed" Unchecked="ChkRawHash_Changed" FontWeight="Bold"/>
+
+        <GroupBox Header="Standard Mode (Calculate Hash)" Margin="0,0,0,10" Padding="5">
+            <StackPanel>
+                <TextBlock Text="Section Name (e.g. Data):"/>
+                <TextBox Name="TxtSection" Margin="0,2,0,5"/>
+
+                <TextBlock Text="Property Name (e.g. BaseHP):"/>
+                <TextBox Name="TxtName" Margin="0,2,0,5"/>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Raw Hash Mode" Margin="0,0,0,10" Padding="5">
+            <StackPanel>
+                <TextBlock Text="Hash ID (Decimal or 0xHex):"/>
+                <TextBox Name="TxtHash" Margin="0,2,0,5" IsEnabled="False" Background="#F0F0F0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <Grid Margin="0,5,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                <TextBlock Text="Value:"/>
+                <TextBox Name="TxtValue" Margin="0,2,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                <TextBlock Text="Data Type:"/>
+                <ComboBox Name="CmbType" SelectedIndex="1">
+                    <ComboBoxItem Content="Integer (Int32)" Tag="0"/>
+                    <ComboBoxItem Content="Float" Tag="1"/>
+                    <ComboBoxItem Content="Byte (0-255)" Tag="4"/>
+                    <ComboBoxItem Content="Bool (True/False)" Tag="5"/>
+                    <ComboBoxItem Content="String" Tag="12"/>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" Width="70" Margin="0,0,10,0" IsCancel="True"/>
+            <Button Content="Add" Width="70" Click="BtnAdd_Click" IsDefault="True"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

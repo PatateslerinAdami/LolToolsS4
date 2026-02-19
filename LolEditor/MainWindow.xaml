@@ -9,21 +9,45 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#F0F0F0" Margin="0,0,0,5">
-            <Button Name="BtnOpen" Content="Open .inibin" Margin="5" Padding="10,5" Click="BtnOpen_Click"/>
+            <Button Name="BtnOpen" Content="Open .inibin/.troybin" Margin="5" Padding="10,5" Click="BtnOpen_Click"/>
+            <Button Name="BtnSave" Content="Save Changes" Margin="5" Padding="10,5" Click="BtnSave_Click" IsEnabled="False"/>
+            <Button Name="BtnAddProp" Content="Add Property" Margin="20,5,5,5" Padding="10,5" Click="BtnAddProp_Click" IsEnabled="False"/>
             <Button Name="BtnTestHash" Content="Test Hash" Margin="5" Padding="10,5" Click="BtnTestHash_Click"/>
         </StackPanel>
 
         <TreeView Grid.Row="1" Name="FileTree">
+            <TreeView.Resources>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="True"/>
+                </Style>
+            </TreeView.Resources>
+
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Properties}">
-                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Hash, StringFormat=' ({0})'}" Foreground="Silver" FontSize="10" VerticalAlignment="Center"/>
+
+                        <StackPanel.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Add Property..." Click="BtnAddProperty_Click"/>
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
+                    </StackPanel>
+
                     <HierarchicalDataTemplate.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Name}" Foreground="Blue" Margin="0,0,5,0"/>
-                                <TextBlock Text="=" Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding Value}" Foreground="Green"/>
-                                <TextBlock Text="{Binding Hash, StringFormat='(Hash: {0})'}" Foreground="Gray" Margin="10,0,0,0" FontSize="10"/>
+                                <StackPanel.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Delete Property" Click="BtnDeleteProperty_Click"/>
+                                    </ContextMenu>
+                                </StackPanel.ContextMenu>
+
+                                <TextBlock Text="{Binding Name}" Foreground="Blue" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="=" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBox Text="{Binding Value}" MinWidth="50" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Hash, StringFormat='(Hash: {0})'}" Foreground="Gray" Margin="10,0,0,0" FontSize="10" VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </HierarchicalDataTemplate.ItemTemplate>
