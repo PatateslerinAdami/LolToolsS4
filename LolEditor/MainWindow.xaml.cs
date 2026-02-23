@@ -1,7 +1,9 @@
 ﻿using LolFormats;
 using Microsoft.Win32;
-using System.Windows;
 using System.Collections.Generic;
+using System.Text;
+using System.Windows;
+using System.Windows.Input;
 
 namespace LolEditor
 {
@@ -28,6 +30,7 @@ namespace LolEditor
 
         private void LoadFile(string path)
         {
+            TxtSearch.Text = string.Empty;
             _currentFilePath = path;
             string extension = System.IO.Path.GetExtension(path).ToLower();
             if (extension == ".luaobj")
@@ -285,8 +288,11 @@ namespace LolEditor
         private void BtnAddProperty_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.MenuItem menuItem &&
-                menuItem.DataContext is InibinSection section)
+                menuItem.DataContext is InibinSection viewSection)
             {
+                var realSection = _currentFile.Sections.FirstOrDefault(s => s.Hash == viewSection.Hash && s.Name == viewSection.Name);
+                if (realSection == null) return;
+
                 var dialog = new AddPropertyWindow();
                 dialog.Owner = this;
 
@@ -298,22 +304,15 @@ namespace LolEditor
                     if (dialog.UseRawHash)
                     {
                         newHash = dialog.FinalHash;
-
                         string known = _dictionary.GetName(newHash);
-                        if (known != null)
-                        {
-                            newName = known.Contains("*") ? known.Split('*')[1] : known;
-                        }
-                        else
-                        {
-                            newName = $"Unknown_{newHash}";
-                        }
+                        newName = known != null ? (known.Contains("*") ? known.Split('*')[0] : known) : $"Unknown_{newHash}";
                     }
                     else
                     {
-                        newHash = InibinHash.Hash(section.Name, dialog.PropName);
+                        newHash = InibinHash.Hash(realSection.Name, dialog.PropName);
                         newName = dialog.PropName;
                     }
+
                     var newProp = new InibinProperty
                     {
                         Name = newName,
@@ -322,11 +321,14 @@ namespace LolEditor
                         Value = ConvertValue(dialog.PropValue, dialog.SelectedTypeId)
                     };
 
-                    section.Properties.Add(newProp);
-                    FileTree.Items.Refresh();
+                    realSection.Properties.Add(newProp);
+
+                    if (!string.IsNullOrWhiteSpace(TxtSearch.Text)) ApplyFilter();
+                    else FileTree.Items.Refresh();
                 }
             }
         }
+
         private void BtnAddProp_Click(object sender, RoutedEventArgs e)
         {
             if (_currentFile == null) return;
@@ -366,7 +368,8 @@ namespace LolEditor
                 };
 
                 targetSection.Properties.Add(newProp);
-                FileTree.Items.Refresh();
+                if (!string.IsNullOrWhiteSpace(TxtSearch.Text)) ApplyFilter();
+                else FileTree.Items.Refresh();
             }
         }
         private InibinSection FindOrCreateSection(string name)
@@ -407,7 +410,8 @@ namespace LolEditor
                             break; 
                         }
                     }
-                    FileTree.Items.Refresh();
+                    if (!string.IsNullOrWhiteSpace(TxtSearch.Text)) ApplyFilter();
+                    else FileTree.Items.Refresh();
                 }
             }
         }
@@ -438,6 +442,111 @@ namespace LolEditor
             {
                 MessageBox.Show($"Could not convert '{input}' to the selected type.");
                 return input; 
+            }
+        }
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                TxtSearch.Focus();
+                TxtSearch.SelectAll();
+                e.Handled = true;
+            }
+        }
+        private void TxtSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            ApplyFilter();
+        }
+
+        private void ApplyFilter()
+        {
+            if (_currentFile == null) return;
+
+            string query = TxtSearch.Text.ToLower();
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                FileTree.ItemsSource = _currentFile.Sections;
+                return;
+            }
+
+            var filteredSections = new List<InibinSection>();
+            foreach (var sec in _currentFile.Sections)
+            {
+                bool secMatches = sec.Name != null && sec.Name.ToLower().Contains(query);
+
+                var matchingProps = sec.Properties.Where(p =>
+                    (p.Name != null && p.Name.ToLower().Contains(query)) ||
+                    (p.ValueStr != null && p.ValueStr.ToLower().Contains(query)) ||
+                    p.Hash.ToString().Contains(query)
+                ).ToList();
+
+                if (secMatches || matchingProps.Count > 0)
+                {
+                    filteredSections.Add(new InibinSection
+                    {
+                        Name = sec.Name,
+                        Hash = sec.Hash,
+                        Properties = secMatches ? sec.Properties.ToList() : matchingProps
+                    });
+                }
+            }
+
+            FileTree.ItemsSource = filteredSections;
+        }
+        private void BtnCopyAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentFile == null) return;
+
+            var itemsToCopy = FileTree.ItemsSource as IEnumerable<InibinSection> ?? _currentFile.Sections;
+            var sb = new StringBuilder();
+
+            foreach (var sec in itemsToCopy)
+            {
+                sb.AppendLine($"");
+                foreach (var prop in sec.Properties)
+                {
+                    sb.AppendLine($"{prop.Name} = {prop.ValueStr}");
+                }
+                sb.AppendLine();
+            }
+
+            CopyToClipboard(sb.ToString(), "All visible results copied to clipboard!");
+        }
+        private void BtnCopySection_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.MenuItem menuItem && menuItem.DataContext is InibinSection sec)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"");
+                foreach (var prop in sec.Properties)
+                {
+                    sb.AppendLine($"{prop.Name} = {prop.ValueStr}");
+                }
+                CopyToClipboard(sb.ToString());
+            }
+        }
+
+        private void BtnCopyProperty_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.MenuItem menuItem && menuItem.DataContext is InibinProperty prop)
+            {
+                CopyToClipboard($"{prop.Name} = {prop.ValueStr}");
+            }
+        }
+
+        private void CopyToClipboard(string text, string successMessage = null)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            try
+            {
+                Clipboard.SetText(text);
+                if (successMessage != null)
+                    MessageBox.Show(successMessage, "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch
+            {
+                MessageBox.Show("Failed to copy to clipboard. Another application might be using it.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
