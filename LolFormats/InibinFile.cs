@@ -19,7 +19,10 @@ namespace LolFormats
                     return string.Join(" ", fArr.Select(f => f.ToString(CultureInfo.InvariantCulture)));
 
                 if (Value is bool bVal)
-                    return bVal ? "1" : "0"; 
+                    return bVal ? "1" : "0";
+
+                if (Value is Dictionary<object, object> dict)
+                    return FormatDictionary(dict);
 
                 return Value.ToString();
             }
@@ -34,6 +37,18 @@ namespace LolFormats
                    
                 }
             }
+        }
+        private string FormatDictionary(Dictionary<object, object> dict)
+        {
+            var entries = dict.Select(kvp =>
+            {
+                string key = kvp.Key is double || kvp.Key is int ? $"[{kvp.Key}]" : kvp.Key.ToString();
+                string val = kvp.Value is Dictionary<object, object> subDict
+                    ? FormatDictionary(subDict)
+                    : (kvp.Value?.ToString() ?? "null");
+                return $"{key}={val}";
+            });
+            return "{" + string.Join(", ", entries) + "}";
         }
         private object ParseStringValue(string input, int typeId)
         {
