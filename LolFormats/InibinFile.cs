@@ -21,6 +21,9 @@ namespace LolFormats
                 if (Value is bool bVal)
                     return bVal ? "1" : "0";
 
+                if (Value is LuaChunk)
+                    return "<Compiled Function> (Copy to view assembly)";
+
                 if (Value is Dictionary<object, object> dict)
                     return FormatDictionary(dict);
 
