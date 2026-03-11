@@ -586,7 +586,14 @@ namespace LolEditor
                 sb.AppendLine($"[{sec.Name}]");
                 foreach (var prop in sec.Properties)
                 {
-                    sb.AppendLine($"{prop.Name} = {prop.ValueStr}");
+                    if (prop.Value is LolFormats.LuaChunk chunk)
+                    {
+                        sb.AppendLine($"{prop.Name} =\r\n{chunk.Disassemble()}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"{prop.Name} = {prop.ValueStr}");
+                    }
                 }
                 sb.AppendLine();
             }
@@ -602,7 +609,14 @@ namespace LolEditor
                 sb.AppendLine($"[{sec.Name}]");
                 foreach (var prop in sec.Properties)
                 {
-                    sb.AppendLine($"{prop.Name} = {prop.ValueStr}");
+                    if (prop.Value is LolFormats.LuaChunk chunk)
+                    {
+                        sb.AppendLine($"{prop.Name} =\r\n{chunk.Disassemble()}");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"{prop.Name} = {prop.ValueStr}");
+                    }
                 }
                 CopyToClipboard(sb.ToString().TrimEnd());
             }
